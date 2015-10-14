@@ -1,15 +1,17 @@
-A monad tutorial for Clojure programmers (part 2)
+클로저 개발자를 위한 모나드 튜토리얼 2
 =================
 
-In the first part of this tutorial, I have introduced the two most basic monads: the identity monad and the maybe monad. In this part, I will continue with the sequence monad, which will be the occasion to explain the role of the mysterious ``m-result`` function. I will also show a couple of useful generic monad operations.
+첫번째 장에서 기본적인 모나드인 identity 모나드와 maybe 모나드에 대해서 알아봤다. 두번째 장에서는 ``m-result``함수를 설명하기 위해 sequence 모나드에 대해 알아보려고 한다. 또 잘 알려진 유용한 몇가지 모나드 동작에 대해서도 설명하려고 한다.
 
-One of the most frequently used monads is the sequence monad (known in the Haskell world as the list monad). It is in fact so common that it is built into Clojure as well, in the form of the for form. Let’s look at an example:
+sequence 모나드(하스켈에서는 list 모나드라고 부른다)는 많이 사용되는 모나드 중 하나다. sequence 모나드는 클로저에서 `for` 구문 형태로 기본적으로 제공하고 있다. 다음 예제를 보자:
 
 ```clj
 (for [a (range 5)
       b (range a)]
   (* a b))
 ```
+
+`for` 구문은 `let`구문과 비슷하다. `for`구문은 `let` 구문처럼 바인딩을 표현하는 리스트(먼저 나온 바인딩은 다음 바인딩에서 사용할 수 있다)과 바인딩 된 심볼을 사용해 최종 결과를 표현할 수 있는 구문으로 구성된다. 
 
 A for form resembles a let form not only syntactically. It has the same structure: a list of binding expressions, in which each expression can use the bindings from the preceding ones, and a final result expressions that typically depends on all the bindings as well. The difference between let and for is that let binds a single value to each symbol, whereas for binds several values in sequence. The expressions in the binding list must therefore evaluate to sequences, and the result is a sequence as well. The for form can also contain conditions in the form of ``:when`` and ``:while`` clauses, which I will discuss later. From the monad point of view of composable computations, the sequences are seen as the results of non-deterministic computations, i.e. computations that have more than one result.
 
