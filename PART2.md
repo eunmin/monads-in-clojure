@@ -11,11 +11,9 @@ sequence 모나드(하스켈에서는 list 모나드라고 부른다)는 많이 
   (* a b))
 ```
 
-`for` 구문은 `let`구문과 비슷하다. `for`구문은 `let` 구문처럼 바인딩을 표현하는 리스트(먼저 나온 바인딩은 다음 바인딩에서 사용할 수 있다)과 바인딩 된 심볼을 사용해 최종 결과를 표현할 수 있는 구문으로 구성된다. 
+`for` 구문은 `let`구문과 비슷하다. `for`구문은 `let` 구문처럼 바인딩 리스트(먼저 나온 바인딩은 다음 바인딩에서 사용할 수 있다)와 바인딩 된 심볼을 사용해 최종 결과를 표현할 수 있는 구문으로 구성된다. `for` 구문이 `let` 구문과 다른 점은 `let`은 하나의 값이 하나의 심볼에 바인딩 되지만 `for`는 시퀀스의 여러개의 값이 바인딩 된다는 점이다. 그래서 바인딩 리스트는 시퀀스 값이어야 하고 결과 역시 시퀀스가 된다. `for` 구문은 ``:when``과 ``:while`` 절이 있는데 이것은 나중에 설명하려고 한다. 조합 가능한 계산을 표현하는 모나드의 관점에서 보면 시퀀스는 결정되지 않은 계산의 결과처럼 보인다. 예를 들어 하나 이상이 결과를 가지는 계산같은 것이다.
 
-A for form resembles a let form not only syntactically. It has the same structure: a list of binding expressions, in which each expression can use the bindings from the preceding ones, and a final result expressions that typically depends on all the bindings as well. The difference between let and for is that let binds a single value to each symbol, whereas for binds several values in sequence. The expressions in the binding list must therefore evaluate to sequences, and the result is a sequence as well. The for form can also contain conditions in the form of ``:when`` and ``:while`` clauses, which I will discuss later. From the monad point of view of composable computations, the sequences are seen as the results of non-deterministic computations, i.e. computations that have more than one result.
-
-Using the monad library, the above loop is written as
+위 예제를 모나드 라이브러리를 써서 표현해 보면 다음과 같다.
 
 ```clj
 (domonad sequence-m
@@ -24,16 +22,17 @@ Using the monad library, the above loop is written as
   (* a b))
 ```
 
-Since we alread know that the domonad macro expands into a chain of ``m-bind`` calls ending in an expression that calls ``m-result``, all that remains to be explained is how ``m-bind`` and ``m-result`` are defined to obtain the desired looping effect.
+앞서 domonad 매크로는 ``m-result``라고 부르는 표현의 마지막 부분에서 부터 ``m-bind``를 연속으로 부르는 형태라는 것을 알아봤다. 이제 ``m-bind``와 ``m-result``로 반복하는 구문처럼 표현하기 위해 어떻게 해야하는지 설명하려고 한다.
 
-As we have seen before, ``m-bind`` calls a function of one argument that represents the rest of the computation, with the function argument representing the bound variable. To get a loop, we have to call this function repeatedly. A first attempt at such an ``m-bind`` function would be
+앞서 알아본 것처럼 ``m-bind``는 계산의 결과를 나타내는 하나의 인자와 바인딩된 값을 나타내는 함수로 호출 한다.
+반복문처럼 쓰려면 이 함수를 반복해서 호출 하면된다. ``m-bind`` 함수의 첫번째 모습은 다음과 같다.
 
 ```clj
 (defn m-bind-first-try [sequence function]
   (map function sequence))
 ```
 
-Let’s see what this does for our example:
+어떻게 동작하는지 다음 예제를 보자.
 
 ```clj
 (m-bind-first-try (range 5)  (fn [a]
@@ -41,7 +40,8 @@ Let’s see what this does for our example:
 (* a b)))))
 ```
 
-This yields ``(() (0) (0 2) (0 3 6) (0 4 8 12))``, whereas the for form given above yields ``(0 0 2 0 3 6 0 4 8 12)``. Something is not yet quite right. We want a single flat result sequence, but what we get is a nested sequence whose nesting level equals the number of ``m-bind`` calls. Since ``m-bind`` introduces one level of nesting, it must also remove one. That sounds like a job for concat. So let’s try again:
+위 예제는 ``(() (0) (0 2) (0 3 6) (0 4 8 12))``와 같다. 하지만 `for`의 실행 결과는 ``(0 0 2 0 3 6 0 4 8 12)``이다.
+그래서 아직 완성되지는 않았다. 결과가 하나의 시퀀스에 담겨있기를 기대했지만 ``m-bind``를 호출한 횟수의 깊이로 시퀀스가 감싸져 있다. ``m-bind``는 하나의 단계로만 감싸있어야 하기 때문에 안쪽에 감싸져있는 부분은 제거 해야한다. 이 일은 concat이 할 수 있다. 다음과 같이 해보자.
 
 ```clj
 (defn m-bind-second-try [sequence function]
@@ -52,12 +52,13 @@ This yields ``(() (0) (0 2) (0 3 6) (0 4 8 12))``, whereas the for form given ab
 (* a b)))))
 ```
 
-This is worse: we get an exception. Clojure tells us:
+안타깝게도 예외가 발생한다. 예외 내용은 다음과 같다.
 
 ```clj 
 java.lang.IllegalArgumentException: Don't know how to create ISeq from: Integer
 ```
-Back to thinking!
+
+다시 살펴보자!
 
 Our current ``m-bind`` introduces a level of sequence nesting and also takes one away. Its result therefore has as many levels of nesting as the return value of the function that is called. The final result of our expression has as many nesting values as ``(* a b)`` – which means none at all. If we want one level of nesting in the result, no matter how many calls to ``m-bind`` we have, the only solution is to introduce one level of nesting at the end. Let’s try a quick fix:
 
