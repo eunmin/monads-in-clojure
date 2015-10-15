@@ -60,6 +60,10 @@ java.lang.IllegalArgumentException: Don't know how to create ISeq from: Integer
 
 다시 살펴보자!
 
+지금 만든 ``m-bind``는 어떤 경우든 안쪽에 .. 
+그래서 결과는 
+표현식의 마지막 결과
+결과가 한 단계로 감싸져 있는 것을 기대하기 때문에 ``m-bind``가 호출되는 횟수는 상관 없이 마지막 단계가 하나의 단계로 감싸있으면 된다.
 Our current ``m-bind`` introduces a level of sequence nesting and also takes one away. Its result therefore has as many levels of nesting as the return value of the function that is called. The final result of our expression has as many nesting values as ``(* a b)`` – which means none at all. If we want one level of nesting in the result, no matter how many calls to ``m-bind`` we have, the only solution is to introduce one level of nesting at the end. Let’s try a quick fix:
 
 ```clj 
