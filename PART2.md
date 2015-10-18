@@ -72,7 +72,12 @@ Our current ``m-bind`` introduces a level of sequence nesting and also takes one
 (list (* a b))))))
 ```
 
-This works! Our ``(fn [b] ...)`` always returns a one-element list. The inner ``m-bind`` thus creates a sequence of one-element lists, one for each value of ``b``, and concatenates them to make a flat list. The outermost ``m-bind`` then creates such a list for each value of ``a`` and concatenates them to make another flat list. The result of each ``m-bind`` thus is a flat list, as it should be. And that illustrates nicely why we need ``m-result`` to make a monad work. The final definition of the sequence monad is thus given by
+잘 동작한다! ``(fn [b] ...)`` 함수는 항상 항목 하나를 가진 리스트를 리턴한다.
+안쪽에 있는 ``m-bind``는 각 ``b``에 대한 값 하나의 항목을 가진 리스트의 시퀀스를 만들고 그것들을 합쳐 하나의 중첩되지 않은 리스트로 만든다.
+바깥에 있는 ``m-bind``는 각 ``a``에 대한 값 하나의 항목을 가진 리스트의 시퀀스를 만들고 그것들을 합쳐 하나의 중첩되지 않은 리스트로 만든다.
+그래서 각 ``m-bind``의 결과는 중첩되지 않는 리스트가 나온다.
+이 예제는 모나드에서 ``m-result``가 어떻게 사용되는지 보여준다.
+시퀀스 모나드의 최종 모습은 다음과 같다.
 
 ```clj
 (defn m-bind [sequence function]
@@ -81,6 +86,8 @@ This works! Our ``(fn [b] ...)`` always returns a one-element list. The inner ``
 (defn m-result [value]
   (list value))
 ```
+
+``m-result``는 모나드 표현식의 심볼에 바인딩될 오른쪽에 있는 값을 변환 하는 역할을 한다.
 
 The role of ``m-result`` is to turn a bare value into the expression that, when appearing on the right-hand side in a monadic binding, binds the symbol to that value. This is one of the conditions that a pair of m-bind and ``m-result`` functions must fulfill in order to define a monad. Expressed as Clojure code, this condition reads
 
